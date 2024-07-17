@@ -1,12 +1,16 @@
-import socket
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse
 import logging
+import os
+import socket
+from urllib.parse import urlparse
+
 
 logging.basicConfig(level=logging.DEBUG)
 
-SOCKET_PORT = 5000
-SOCKET_HOST = "localhost"
+HTTP_HOST = os.environ.get("HTTP_HOST", "localhost")
+HTTP_PORT = int(os.environ.get("HTTP_PORT", 3000))
+SOCKET_PORT = int(os.environ.get("SOCKET_PORT", 5000))
+SOCKET_HOST = os.environ.get("SOCKET_HOST", "localhost")
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -42,15 +46,15 @@ class RequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = self._parse_path()
         if path == "/":
-            self._send_html_file("./pages/index.html")
+            self._send_html_file("pages/index.html")
         elif path == "/message.html":
-            self._send_html_file("./pages/message.html")
+            self._send_html_file("pages/message.html")
         elif path == "/logo.png":
-            self._send_image_file("./pages/logo.png")
+            self._send_image_file("pages/logo.png")
         elif path == "/style.css":
-            self._send_style_file("./pages/style.css")
+            self._send_style_file("pages/style.css")
         else:
-            self._send_html_file("./pages/error.html", status=404)
+            self._send_html_file("pages/error.html", status=404)
 
     def do_POST(self):
         path = self._parse_path()
@@ -61,22 +65,22 @@ class RequestHandler(BaseHTTPRequestHandler):
                 try:
                     data = post_data.decode("utf-8")
                 except UnicodeDecodeError:
-                    self._send_html_file("./pages/error.html", status=400)
+                    self._send_html_file("pages/error.html", status=400)
                 else:
                     logging.debug(f"Received data: {data}")
                 try:
                     self.sock.sendto(data.encode("utf-8"), (SOCKET_HOST, SOCKET_PORT))
                 except Exception as e:
                     logging.error(f"Error sending data: {e}")
-                    self._send_html_file("./pages/error.html", status=500)
-                self._send_html_file("./pages/success.html")
+                    self._send_html_file("pages/error.html", status=500)
+                self._send_html_file("pages/success.html")
 
         else:
-            self._send_html_file("./pages/error.html", status=404)
+            self._send_html_file("pages/error.html", status=404)
 
 
 class Server:
-    def __init__(self, host="localhost", port=8000):
+    def __init__(self, host: str = HTTP_HOST, port: int = HTTP_PORT):
         self.server = HTTPServer((host, port), RequestHandler)
 
     def run(self):
