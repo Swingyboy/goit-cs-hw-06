@@ -1,8 +1,19 @@
+import socket
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+
+SOCKET_PORT = 5000
+SOCKET_HOST = "localhost"
 
 
 class RequestHandler(BaseHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        super().__init__(*args, **kwargs)
+
     def _parse_path(self):
         url = urlparse(self.path)
         return url.path
@@ -46,9 +57,20 @@ class RequestHandler(BaseHTTPRequestHandler):
         if path == "/message":
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
-            with open("./pages/message.txt", "wb") as fd:
-                fd.write(post_data)
-            self._send_html_file("./pages/success.html")
+            if post_data:
+                try:
+                    data = post_data.decode("utf-8")
+                except UnicodeDecodeError:
+                    self._send_html_file("./pages/error.html", status=400)
+                else:
+                    logging.debug(f"Received data: {data}")
+                try:
+                    self.sock.sendto(data.encode("utf-8"), (SOCKET_HOST, SOCKET_PORT))
+                except Exception as e:
+                    logging.error(f"Error sending data: {e}")
+                    self._send_html_file("./pages/error.html", status=500)
+                self._send_html_file("./pages/success.html")
+
         else:
             self._send_html_file("./pages/error.html", status=404)
 
