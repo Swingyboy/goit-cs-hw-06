@@ -13,6 +13,10 @@ body {
   max-width: 960px;
 }
 
+.success-message {
+    color: green;
+}
+
 textarea {
   height: 250px;
 }
